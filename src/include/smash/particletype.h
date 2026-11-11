@@ -110,6 +110,21 @@ class ParticleType {
   static constexpr double width_cutoff = 1e-5;
 
   /**
+   * Pole-mass mode (shortrange fork; off by default).
+   *
+   * When on: decay products are given their pole masses instead of masses
+   * sampled from spectral functions (two-body and many-body decays, including
+   * the MCMC fallback), and a decay channel is open only if the parent mass is
+   * at least the sum of the daughters' pole masses. Partial widths of open
+   * channels are unchanged, so for a parent at its pole mass the branching
+   * ratios are the tabulated ones renormalized over the channels open at the
+   * pole. Meant for decay-only calculations without finite widths.
+   */
+  static void set_pole_masses_only(bool on);
+  /// \return whether pole-mass mode is on (see set_pole_masses_only).
+  static bool pole_masses_only();
+
+  /**
    * Creates a fully initialized ParticleType object.
    *
    * \param[in] n The name of the particle.

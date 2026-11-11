@@ -48,6 +48,17 @@ ParticleTypePtrList baryon_resonances_list;
 ParticleTypePtrList light_nuclei_list;
 }  // unnamed namespace
 
+namespace {
+/// Pole-mass mode switch (see ParticleType::set_pole_masses_only).
+bool pole_masses_only_flag = false;
+}  // unnamed namespace
+
+void ParticleType::set_pole_masses_only(bool on) {
+  pole_masses_only_flag = on;
+}
+
+bool ParticleType::pole_masses_only() { return pole_masses_only_flag; }
+
 const ParticleTypeList &ParticleType::list_all() {
   assert(all_particle_types);
   return *all_particle_types;
@@ -425,6 +436,15 @@ double ParticleType::partial_width(const double m,
                                    const DecayBranch *mode) const {
   if (m < mode->threshold()) {
     return 0.;
+  }
+  if (pole_masses_only_flag) {
+    double pole_threshold = 0.;
+    for (const auto &daughter : mode->type().particle_types()) {
+      pole_threshold += daughter->mass();
+    }
+    if (m < pole_threshold) {
+      return 0.;
+    }
   }
   double partial_width_at_pole = width_at_pole() * mode->weight();
   return mode->type().width(mass(), partial_width_at_pole, m);

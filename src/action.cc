@@ -434,7 +434,7 @@ void sample_manybody_phasespace_impl(double sqrts,
       masses.clear();
       masses_sum.clear();
       for (const auto &type : types) {
-        if (type->is_stable()) {
+        if (type->is_stable() || ParticleType::pole_masses_only()) {
           masses.push_back(type->mass());
         } else {
           masses.push_back(
@@ -472,7 +472,7 @@ void sample_manybody_phasespace_impl(double sqrts,
       double weight_sqr = 1;
       for (size_t i = 0; i < n; i++) {
         const double ratio =
-            types[i]->is_stable()
+            (types[i]->is_stable() || ParticleType::pole_masses_only())
                 ? 1
                 : types[i]->ratio_spectral_full_to_breit_wigner(masses[i]);
         weight_sqr *= ratio * ratio;
@@ -573,17 +573,23 @@ void sample_manybody_phasespace_MCMC(const ParticleTypePtrList &types,
       do {
         idx2 = random::uniform_int(0, n - 1);
       } while (idx2 == idx1);
-    } while (types[idx1]->is_stable() && types[idx2]->is_stable());
+    } while (types[idx1]->is_stable() && types[idx2]->is_stable() &&
+             !ParticleType::pole_masses_only());
 
     // Energy of the pair and CM frame velocity
     const FourVector p_sum = sampled_momenta[idx1] + sampled_momenta[idx2];
     const ThreeVector beta = p_sum.velocity();
     const double sqrts_12 = p_sum.abs();
     double m1, m2;
-    do {
-      m1 = types[idx1]->sample_full_spectral_function(sqrts_12);
-      m2 = types[idx2]->sample_full_spectral_function(sqrts_12);
-    } while (sqrts_12 < m1 + m2);
+    if (ParticleType::pole_masses_only()) {
+      m1 = types[idx1]->mass();
+      m2 = types[idx2]->mass();
+    } else {
+      do {
+        m1 = types[idx1]->sample_full_spectral_function(sqrts_12);
+        m2 = types[idx2]->sample_full_spectral_function(sqrts_12);
+      } while (sqrts_12 < m1 + m2);
+    }
     const double pcm = pCM(sqrts_12, m1, m2);
     Angles phitheta;
     phitheta.distribute_isotropically();
@@ -593,12 +599,13 @@ void sample_manybody_phasespace_MCMC(const ParticleTypePtrList &types,
      * accept more often if the ratio increases, and less if it decreases.
      */
     double acc = 1.0;
-    if (!types[idx1]->is_stable()) {
+    const bool pole = ParticleType::pole_masses_only();
+    if (!pole && !types[idx1]->is_stable()) {
       acc *= types[idx1]->ratio_spectral_full_to_breit_wigner(m1) /
              types[idx1]->ratio_spectral_full_to_breit_wigner(
                  sampled_momenta[idx1].abs());
     }
-    if (!types[idx2]->is_stable()) {
+    if (!pole && !types[idx2]->is_stable()) {
       acc *= types[idx2]->ratio_spectral_full_to_breit_wigner(m2) /
              types[idx2]->ratio_spectral_full_to_breit_wigner(
                  sampled_momenta[idx2].abs());

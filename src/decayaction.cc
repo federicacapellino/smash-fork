@@ -191,6 +191,15 @@ std::pair<double, double> DecayAction::sample_masses(
           std::to_string(t_b.min_mass_kinematic()));
     }
   }
+  // Pole-mass mode: keep the pole masses (the channel is open only if they fit).
+  if (ParticleType::pole_masses_only()) {
+    if (kinetic_energy_cm < masses.first + masses.second) {
+      throw InvalidResonanceFormation(
+          incoming_particles_[0].type().name() + "→" + t_a.name() +
+          t_b.name() + ": below the pole-mass threshold in pole-mass mode");
+    }
+    return masses;
+  }
   // If one of the particles is a resonance, sample its mass.
   if (!t_a.is_stable() && t_b.is_stable()) {
     masses.first = t_a.sample_resonance_mass(t_b.mass(), kinetic_energy_cm, L_);
